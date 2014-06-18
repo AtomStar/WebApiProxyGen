@@ -1,14 +1,14 @@
 ﻿<?xml version="1.0"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
   <metadata>
-    <id>WebApiProxyGenClient</id>
+    <id>WebApiProxyClient</id>
     <version>1.0.0</version>
     <title>WebApi Proxy Client Template</title>
     <projectUrl>https://github.com/AtomStar/WebApiProxyGen</projectUrl>
     <authors>Ewald Stieger</authors>
     <owners>Ewald Stieger</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>This package provides a T4 template that generates snyc proxy classes based on an ASP.NET Web Api metadata service</description>
+    <description>This package provides a T4 template that generates proxy classes based on an ASP.NET Web Api metadata service.</description>
     <releaseNotes></releaseNotes>
     <copyright>Copyright 2014</copyright>
     <tags>AspNet WebAPI Proxy CSharp</tags>
