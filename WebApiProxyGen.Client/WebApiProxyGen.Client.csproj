@@ -48,6 +48,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="WebApiProxy.config" />
+    <None Include="WebApiProxyGenClient.nuspec" />
     <None Include="WebProxy\WebProxy.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>WebProxy.cs</LastGenOutput>
