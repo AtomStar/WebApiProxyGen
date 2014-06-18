@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiProxyGen.Server", "WebApiProxyGen\WebApiProxyGen.Server.csproj", "{A0FC15EB-6FC2-4155-A88A-CD3F9AC7DE38}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiProxyGen.Server", "WebApiProxyGen.Server\WebApiProxyGen.Server.csproj", "{A0FC15EB-6FC2-4155-A88A-CD3F9AC7DE38}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiProxyGen.Client", "WebApiProxyGen.Client\WebApiProxyGen.Client.csproj", "{14FDB788-3733-4541-89A2-87AA4DF501D0}"
 EndProject
