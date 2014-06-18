@@ -1,0 +1,331 @@
+﻿<#@ template debug="true" hostspecific="true" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ assembly name="System.Data" #>
+<#@ assembly name="System.Xml.dll" #>
+<#@ assembly name="System.Net.dll" #>
+<#@ assembly name="System.Web" #>
+<#@ assembly name="System.Net.Http.dll" #>
+<#@ assembly name="System.Net.Http.Formatting.dll" #>
+<#@ assembly name="System.Threading" #>
+<#@ assembly name="Newtonsoft.Json.dll" #>
+<#@ assembly name="System.Xml.Linq.dll" #>
+<#@ assembly name="EnvDTE" #>
+<#@ import namespace="EnvDTE" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Threading.Tasks" #>
+<#@ import namespace="System.Xml.Linq" #>
+<#@ import namespace="System.Net" #>
+<#@ import namespace="System.Web" #>
+<#@ import namespace="System.Net.Http" #>
+<#@ import namespace="System.Net.Http.Formatting" #>
+<#@ import namespace="Newtonsoft.Json" #>
+<#@ output extension=".cs" #>
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Net.Http.Formatting;
+using System.Web;
+using System.Web.Http;
+using System.Text;
+using System.Threading.Tasks;
+using System.Xml.Linq;
+<#
+    string projectPath = Host.ResolveAssemblyReference("$(ProjectDir)");
+	var webApiConfig=new WebApiConfig(projectPath);
+	var endpoints=webApiConfig.LoadEndpoints();
+#>
+<#	foreach (var endpoint in endpoints){ #>
+using <#= endpoint.Namespace#>.Models;
+using <#= endpoint.Namespace#>.Clients;
+<#}#>
+
+
+<#	foreach (var endpoint in endpoints){ #>
+namespace <#=endpoint.Namespace#>.Models
+{
+
+<# foreach(var model in endpoint.Meta.Models) { #>
+	
+	public partial class <#=model.Name#>
+	{
+<# foreach(var propertyItem in model.Properties) { if(propertyItem.Type.EndsWith("Controller")) {#>
+		public static <#= propertyItem.Type #> <#= propertyItem.Name #> { get; set; }
+<# } else {#>
+		public virtual <#= propertyItem.Type #> <#= propertyItem.Name #> { get; set; }
+<#}}#>
+<#  if(model.ControllerProperty!=null) { #>
+		public <#=model.Name#>()
+		{
+			InitializeController();
+		}
+		public static void InitializeController()
+		{
+			if(<#=model.ControllerProperty.Name#>==null)
+				<#=model.ControllerProperty.Name#>=new <#=model.ControllerProperty.Type#>();
+		}
+<#}#>
+<# foreach(var method in model.Methods) { if(method.Static=="static"){#>
+		public <#=method.Static#> <#=method.ReturnType#> <#=method.Name#>(<#=method.ParameterSignature#>)
+		{
+<#  if(model.ControllerProperty!=null) { #>	
+			InitializeController();	
+<#}#>
+			var taskResult=Task.Run(() => <#=model.ControllerProperty.Name#>.<#=method.Name#>Async(<#=method.ParameterNameSignature#>));
+<#  if(method.ReturnType!="void") { #>	
+			return taskResult.Result;
+<#}#>			
+		}
+<# } else {#>
+		public virtual <#=method.ReturnType#> <#=method.Name#>()
+		{
+			var taskResult=Task.Run(() => <#=model.ControllerProperty.Name#>.<#=method.Name#>Async(<#=method.ParameterSignature#>));
+<#  if(method.ReturnType!="void") { #>	
+			return taskResult.Result;
+<#}#>	
+		}
+<#}}#>
+	}	
+<#}#>
+}
+<#}#>
+
+<# foreach (var endpoint in endpoints) { #>
+namespace <#=endpoint.Namespace#>.Clients
+{
+<# foreach(var definition in endpoint.Meta.Definitions) { #>
+
+	public partial class <#=definition.Name#><#= endpoint.ClientSuffix#> : IDisposable
+	{
+		
+		public HttpClient HttpClient { get; private set; }
+
+		/// <summary>
+        /// <#= definition.Description #>
+        /// </summary>
+		public <#=definition.Name#><#= endpoint.ClientSuffix#>()
+		{
+			HttpClient = new HttpClient()
+			{
+				BaseAddress = new Uri("<#= endpoint.Meta.Host#>")
+			};
+		}
+
+		/// <summary>
+        /// <#= definition.Description #>
+        /// </summary>
+		public <#=definition.Name#><#= endpoint.ClientSuffix#>(HttpMessageHandler handler, bool disposeHandler = true)
+		{
+			HttpClient = new HttpClient(handler, disposeHandler)
+			{
+				BaseAddress = new Uri("<#= endpoint.Meta.Host#>")
+			};
+		}
+		#region Methods
+<# foreach(var method in definition.ActionMethods) { 
+		var allParameters = method.UrlParameters.AsEnumerable();
+		
+		var queryParameterString = "\"";
+		var bodyParameterString = "";
+
+
+		if (method.BodyParameter != null) {
+			allParameters = allParameters.Concat(new [] { method.BodyParameter });
+			bodyParameterString = ", " + method.BodyParameter.Name;
+		}
+
+
+		if (allParameters.Any()) {
+			queryParameterString = "?";
+			queryParameterString += string.Join(" + \"&", allParameters.Where(m => m != null).Select(m => m.Name + "=\" + " + m.Name).ToArray());
+		
+		}
+
+		var parameterList = "";
+
+		if (allParameters.Any())
+		{
+		var q = allParameters.Where(m => m != null).Select(m => m.Type + " " + m.Name);
+
+		if (q != null)
+			parameterList = string.Join(",", q.ToArray());
+		}
+
+		var postOrPut =  method.Type.ToLower() == "post" || method.Type.ToLower() == "put";
+		var url = ("\"" + method.Url.Replace("{", "\" + ").Replace("}", " + \"") + "\"").Replace(" + \"\"","");
+#>
+        /// <summary>
+        /// <#= method.Description #>
+        /// </summary>
+<# foreach(var p in method.UrlParameters) { #>
+		/// <param name="<#= p.Name #>"><#= p.Description #></param>
+<# } #>
+        /// <returns>"<#= method.ReturnType#>"</returns>
+		public virtual async Task<<#= method.ReturnType#>> <#= method.Name #>Async(<#= parameterList#>)
+		{
+			var request= await HttpClient.<#=StringExtension.ToTitle(method.Type)#><#= postOrPut ? "AsJson" : "" #>Async<#= postOrPut && method.BodyParameter != null ? "<" + method.BodyParameter.Type + ">" : "" #>(<#=url#><#=bodyParameterString#>);
+			var result= await request.Content.ReadAsAsync<<#= method.ReturnType#>>();
+			return result;
+		}
+
+<#}#>
+		#endregion
+
+		public void Dispose()
+        {
+            HttpClient.Dispose();
+        }
+	}
+
+
+<# } #>
+}
+<# } #>
+
+
+
+<#+
+	public class WebApiConfig
+    {
+        public string ConfigFileName { get; set; }
+		public string ConfigFilePath { get; set; }
+
+        public const string DefaultConfigFileName = "WebApiProxy.config";
+        public const string DefaultClientSuffix = "Client";
+        public const string DefaultNamespace = "WebApiProxy.Proxies";
+        public const string DefaultName = "MyApiProxy";
+        public const string DefaultEndpoint = "http://localhost:8000/api/proxies";
+
+		public WebApiConfig(string configFilePath)
+		{
+			this.ConfigFilePath=configFilePath;
+		}
+
+        public IEnumerable<WebApiEndpoint> LoadEndpoints()
+        {
+           	  
+		    this.ConfigFileName = String.IsNullOrEmpty(this.ConfigFileName) ?
+                             WebApiConfig.DefaultConfigFileName : this.ConfigFileName;
+			
+            var path = Path.Combine(this.ConfigFilePath, this.ConfigFileName);
+            if (!File.Exists(path))
+                throw new Exception("WebApiProxy: Configuration file not found. Please make sure specified config exists within your project root.");
+
+            var xml = XElement.Load(path);
+            var endpoints = (from proxy in xml.Descendants("proxy")
+                            select new WebApiEndpoint
+                            {
+                                ClientSuffix = String.IsNullOrEmpty(proxy.Attribute("clientSuffix").Value) ?
+                                DefaultClientSuffix : proxy.Attribute("clientSuffix").Value,
+                                Name = String.IsNullOrEmpty(proxy.Attribute("name").Value) ?
+                                DefaultName : proxy.Attribute("name").Value,
+                                Namespace = String.IsNullOrEmpty(proxy.Attribute("namespace").Value) ?
+                                DefaultNamespace : proxy.Attribute("namespace").Value,
+                                Endpoint = String.IsNullOrEmpty(proxy.Attribute("endpoint").Value) ?
+                                DefaultEndpoint : proxy.Attribute("endpoint").Value
+                            }).ToList();
+            foreach (var item in endpoints)
+            {
+                item.Meta = WebApiEndpoint.GetData<Metadata>(item.Endpoint);
+            }
+            return endpoints;
+        }
+    }
+    public class WebApiEndpoint
+    {
+        public string ClientSuffix { get; set; }
+        public string Namespace { get; set; }
+        public string Name { get; set; }
+        public string Endpoint { get; set; }
+        public Metadata Meta { get; set; }
+
+        public static T GetData<T>(string url) where T : new()
+        {
+			var json = string.Empty;
+            using (var wc = new WebClient())
+            {         
+                try
+                {
+                    json = wc.DownloadString(url);
+                }
+                catch { }
+                return string.IsNullOrEmpty(json) ? new T() : JsonConvert.DeserializeObject<T>(json);
+            }
+        }
+    }
+    public class Metadata
+    {
+        public string Host { get; set; }
+        public IEnumerable<ControllerDefinition> Definitions { get; set; }
+        public IEnumerable<ModelDefinition> Models { get; set; }
+    }
+    public class ControllerDefinition
+    {
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public IEnumerable<ActionMethodDefinition> ActionMethods { get; set; }
+    }
+    public class ActionMethodDefinition
+    {
+        public string Type { get; set; }
+        public string Name { get; set; }
+        public string Url { get; set; }
+        public IEnumerable<ParameterDefinition> UrlParameters { get; set; }
+        public ParameterDefinition BodyParameter { get; set; }
+        public string Description { get; set; }
+		private string _returnType;
+        public string ReturnType { 
+			get{return String.IsNullOrEmpty(_returnType) ? "HttpResponseMessage" : _returnType;} 
+			set{_returnType=value;} 
+		}
+    }
+    public class ModelDefinition
+    {
+        public string Name { get; set; }
+        public ModelProperty ControllerProperty { get; set; }
+        public IEnumerable<ModelProperty> Properties { get; set; }
+        public List<MethodDefinition> Methods { get; set; }
+    }
+	public class MethodDefinition
+    {
+        public string ModelName { get; set; }
+        public string Name { get; set; }
+		public string Static { get; set; }
+        public List<ParameterDefinition> Parameters { get; set; }
+        public string ReturnType { get; set; }
+        public string ParameterSignature { get; set; }
+		public string ParameterNameSignature { get; set; }
+	}
+    public class ModelProperty
+    {
+        public string Name { get; set; }
+        public string Type { get; set; }
+    }
+    public class ParameterDefinition
+    {
+        public string Name { get; set; }
+        public string Type { get; set; }
+        public string Description { get; set; }
+    }
+
+	public class StringExtension
+    {
+		public static string ToTitle(string helper)
+        {
+            return helper.Substring(0, 1).ToUpper() + helper.Substring(1, helper.Length - 1).ToLower();
+        }
+
+        public static string ToCamelCasing(string helper)
+        {
+            return helper.Replace(helper[0].ToString(), helper[0].ToString().ToLower());
+        }
+	}
+#>
+
