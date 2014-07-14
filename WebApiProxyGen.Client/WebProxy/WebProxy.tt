@@ -5,9 +5,9 @@
 <#@ assembly name="System.Net.dll" #>
 <#@ assembly name="System.Web" #>
 <#@ assembly name="System.Net.Http.dll" #>
-<#@ assembly name="System.Net.Http.Formatting.dll" #>
+<#@ assembly name="$(ProjectDir)$(OutDir)System.Net.Http.Formatting.dll" #>
 <#@ assembly name="System.Threading" #>
-<#@ assembly name="Newtonsoft.Json.dll" #>
+<#@ assembly name="$(ProjectDir)$(OutDir)Newtonsoft.Json.dll" #>
 <#@ assembly name="System.Xml.Linq.dll" #>
 <#@ assembly name="EnvDTE" #>
 <#@ import namespace="EnvDTE" #>
@@ -25,7 +25,7 @@
 <#@ output extension=".cs" #>
 
 using System;
-using System.Collections.Generic;
+using System.Collections.Generic; 
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -114,7 +114,7 @@ namespace <#=endpoint.Namespace#>.Clients
 		{
 			HttpClient = new HttpClient()
 			{
-				BaseAddress = new Uri("<#= endpoint.Meta.Host#>")
+				BaseAddress = new Uri("<#= endpoint.BaseAddress#>")
 			};
 		}
 
@@ -125,7 +125,7 @@ namespace <#=endpoint.Namespace#>.Clients
 		{
 			HttpClient = new HttpClient(handler, disposeHandler)
 			{
-				BaseAddress = new Uri("<#= endpoint.Meta.Host#>")
+				BaseAddress = new Uri("<#= endpoint.BaseAddress#>")
 			};
 		}
 		#region Methods
@@ -229,11 +229,15 @@ namespace <#=endpoint.Namespace#>.Clients
                                 Namespace = String.IsNullOrEmpty(proxy.Attribute("namespace").Value) ?
                                 DefaultNamespace : proxy.Attribute("namespace").Value,
                                 Endpoint = String.IsNullOrEmpty(proxy.Attribute("endpoint").Value) ?
-                                DefaultEndpoint : proxy.Attribute("endpoint").Value
+                                DefaultEndpoint : proxy.Attribute("endpoint").Value,
+								BaseAddress = String.IsNullOrEmpty(proxy.Attribute("baseaddress").Value) ?
+                                "" : proxy.Attribute("baseaddress").Value
                             }).ToList();
             foreach (var item in endpoints)
             {
                 item.Meta = WebApiEndpoint.GetData<Metadata>(item.Endpoint);
+				if(String.IsNullOrEmpty(item.BaseAddress))
+					item.BaseAddress=item.Meta.Host;
             }
             return endpoints;
         }
@@ -244,6 +248,7 @@ namespace <#=endpoint.Namespace#>.Clients
         public string Namespace { get; set; }
         public string Name { get; set; }
         public string Endpoint { get; set; }
+		public string BaseAddress { get; set; }
         public Metadata Meta { get; set; }
 
         public static T GetData<T>(string url) where T : new()
