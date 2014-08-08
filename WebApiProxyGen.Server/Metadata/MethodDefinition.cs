@@ -7,7 +7,7 @@ using System.Web;
 
 namespace WebApiProxyGen.Metadata
 {
-     public class MethodDefinition
+    public class MethodDefinition
     {
         public string ModelName { get; set; }
         public string Name { get; set; }
@@ -17,26 +17,26 @@ namespace WebApiProxyGen.Metadata
         public string ParameterSignature { get; set; }
         public string ParameterNameSignature { get; set; }
 
-        public MethodDefinition(MethodInfo mi, string modelName)
+        public MethodDefinition(MethodInfo mi, string modelName, string nameSpace)
         {
             this.ModelName = modelName;
             this.Name = mi.Name;
             this.Static = "";
             if (mi.Name.StartsWith("Get"))
                 this.Static = "static";
-            this.ReturnType = MetadataProvider.ParseType2(mi.ReturnType);
+            this.ReturnType = MetadataProvider.ParseType2(mi.ReturnType, nameSpace);
             this.Parameters = new List<ParameterDefinition>();
             var parameters = mi.GetParameters();
             foreach (var item in parameters)
             {
                 var parameter = new ParameterDefinition();
-                parameter.Type = MetadataProvider.ParseType2(item.ParameterType);
+                parameter.Type = MetadataProvider.ParseType2(item.ParameterType, nameSpace);
                 parameter.Name = item.Name;
-                if (parameter.Type.ToLower() == this.ModelName.ToLower())
+                if (this.ModelName.Length > 0 && parameter.Type.ToLower().Contains(this.ModelName.ToLower()))
                     parameter.Name = "this";
                 parameter.Description = "";
                 this.Parameters.Add(parameter);
-               
+
             }
             BuildParamSignatures();
         }

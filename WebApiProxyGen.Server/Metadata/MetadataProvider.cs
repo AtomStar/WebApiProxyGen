@@ -24,10 +24,12 @@ namespace WebApiProxyGen.Metadata
     }
     public class MetadataProvider
     {
+        public string Namespace { get; set; }
         List<ModelDefinition> models = new List<ModelDefinition>();
 
         public Metadata GetMetadata(HttpRequestMessage request)
         {
+            models = new List<ModelDefinition>();
             var host = request.RequestUri.Scheme + "://" + request.RequestUri.Authority;
             var descriptions = GlobalConfiguration.Configuration.Services.GetApiExplorer().ApiDescriptions;
             var documentationProvider = GlobalConfiguration.Configuration.Services.GetDocumentationProvider();
@@ -78,6 +80,7 @@ namespace WebApiProxyGen.Metadata
                 Host = host
             };
 
+
             return metadata;
 
         }
@@ -123,8 +126,10 @@ namespace WebApiProxyGen.Metadata
                 }
                 else
                 {
-                    res = type.Name;
-
+                    if (type.Name.EndsWith("Controller"))
+                        res = this.Namespace + ".Clients." + type.Name;
+                    else
+                        res = this.Namespace + ".Models." + type.Name;
                     if (!models.Any(c => c.Name.Equals(type.Name)) && !type.IsInterface)
                         AddModelDefinition(type);
                 }
@@ -132,7 +137,7 @@ namespace WebApiProxyGen.Metadata
 
             return res;
         }
-        public static string ParseType2(Type type)
+        public static string ParseType2(Type type, string nameSpace)
         {
             string res;
 
@@ -158,7 +163,7 @@ namespace WebApiProxyGen.Metadata
                     if (i > 0)
                         res += ", ";
                     //Recursivly find nested arguments
-                    res += ParseType2(args[i]);
+                    res += ParseType2(args[i], nameSpace);
                 }
                 res += ">";
             }
@@ -167,6 +172,13 @@ namespace WebApiProxyGen.Metadata
                 res = type.Name;
                 if (type.ToString().Equals("System.Void"))
                     res = "void";
+                if (!type.FullName.StartsWith("System"))
+                {
+                    if (type.Name.EndsWith("Controller"))
+                        res = nameSpace + ".Clients." + type.Name;
+                    else
+                        res = nameSpace + ".Models." + type.Name;
+                }
             }
             return res;
         }
@@ -207,9 +219,9 @@ namespace WebApiProxyGen.Metadata
                 model.Methods = new List<MethodDefinition>();
                 if (modelControllerProp != null)
                 {
-                    model.Methods = GetInterfaceMethods(modelControllerProp.PropertyType, model.Name);
+                    model.Methods = GetInterfaceMethods(modelControllerProp.PropertyType, model.Name, this.Namespace);
 
-                    var controllerMethods = GetControllerMethods(modelControllerProp.PropertyType);
+                    var controllerMethods = GetControllerMethods(modelControllerProp.PropertyType, this.Namespace);
                     foreach (var item in controllerMethods)
                     {
                         if (!model.Methods.Exists(p => p.Name == item.Name && p.ReturnType == item.ReturnType && p.ParameterSignature == p.ParameterSignature))
@@ -221,7 +233,7 @@ namespace WebApiProxyGen.Metadata
                     models.Add(model);
             }
         }
-        private static List<MethodDefinition> GetInterfaceMethods(Type t, string modelName)
+        private static List<MethodDefinition> GetInterfaceMethods(Type t, string modelName, string nameSpace)
         {
             var methodDefs = new List<MethodDefinition>();
             var interfaces = t.GetInterfaces();
@@ -233,20 +245,20 @@ namespace WebApiProxyGen.Metadata
                     var methods = item.GetMethods();
                     foreach (var method in methods)
                     {
-                        var methodDef = new MethodDefinition(method, modelName);
+                        var methodDef = new MethodDefinition(method, modelName, nameSpace);
                         methodDefs.Add(methodDef);
                     }
                 }
             }
             return methodDefs;
         }
-        private static List<MethodDefinition> GetControllerMethods(Type t)
+        private static List<MethodDefinition> GetControllerMethods(Type t, string nameSpace)
         {
             var methodDefs = new List<MethodDefinition>();
-            var methods = t.GetMethods().Where(p=>p.DeclaringType.Name==t.Name);
+            var methods = t.GetMethods().Where(p => p.DeclaringType.Name == t.Name);
             foreach (var method in methods)
             {
-                var methodDef = new MethodDefinition(method, "");
+                var methodDef = new MethodDefinition(method, "", nameSpace);
                 methodDef.Static = "static";
                 methodDefs.Add(methodDef);
             }
@@ -255,6 +267,5 @@ namespace WebApiProxyGen.Metadata
 
 
     }
-
 
 }

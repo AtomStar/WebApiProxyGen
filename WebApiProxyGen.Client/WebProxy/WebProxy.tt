@@ -25,7 +25,7 @@
 <#@ output extension=".cs" #>
 
 using System;
-using System.Collections.Generic; 
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -235,7 +235,7 @@ namespace <#=endpoint.Namespace#>.Clients
                             }).ToList();
             foreach (var item in endpoints)
             {
-                item.Meta = WebApiEndpoint.GetData<Metadata>(item.Endpoint);
+                item.Meta = item.GetDataPostNamespace<Metadata>();
 				if(String.IsNullOrEmpty(item.BaseAddress))
 					item.BaseAddress=item.Meta.Host;
             }
@@ -264,6 +264,23 @@ namespace <#=endpoint.Namespace#>.Clients
                 return string.IsNullOrEmpty(json) ? new T() : JsonConvert.DeserializeObject<T>(json);
             }
         }
+		public  T GetDataPostNamespace<T>() where T : new()
+        {
+            var json = string.Empty;
+            using (var wc = new WebClient())
+            {
+                try
+                {
+                    System.Collections.Specialized.NameValueCollection reqParam = new System.Collections.Specialized.NameValueCollection();
+                    reqParam.Add("Namespace", this.Namespace);                 
+                    byte[] responsebytes = wc.UploadValues(this.Endpoint, "POST", reqParam);
+                    json= Encoding.UTF8.GetString(responsebytes);                 
+                }
+                catch { }
+                return string.IsNullOrEmpty(json) ? new T() : JsonConvert.DeserializeObject<T>(json);
+            }
+        }
+
     }
     public class Metadata
     {

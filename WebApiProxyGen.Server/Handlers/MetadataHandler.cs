@@ -21,6 +21,9 @@ namespace WebApiProxyGen.Handlers
         {
             return await Task.Run(() =>
             {
+                var param = request.Content.ReadAsStringAsync().Result;
+                var classNamespace = param.Split('=').Length > 1 ? param.Split('=')[1] : "";
+                _metadataProvider.Namespace = classNamespace;
                 var metadata = _metadataProvider.GetMetadata(request);
                 return request.CreateResponse(System.Net.HttpStatusCode.OK, metadata);
             });
