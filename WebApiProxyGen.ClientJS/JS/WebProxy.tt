@@ -1,0 +1,287 @@
+﻿<#@ template debug="true" hostspecific="true" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ assembly name="System.Data" #>
+<#@ assembly name="System.Xml.dll" #>
+<#@ assembly name="System.Net.dll" #>
+<#@ assembly name="System.Web" #>
+<#@ assembly name="System.Net.Http.dll" #>
+<#@ assembly name="$(ProjectDir)$(OutDir)System.Net.Http.Formatting.dll" #>
+<#@ assembly name="System.Threading" #>
+<#@ assembly name="$(ProjectDir)$(OutDir)Newtonsoft.Json.dll" #>
+<#@ assembly name="System.Xml.Linq.dll" #>
+<#@ assembly name="EnvDTE" #>
+<#@ import namespace="EnvDTE" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Threading.Tasks" #>
+<#@ import namespace="System.Xml.Linq" #>
+<#@ import namespace="System.Net" #>
+<#@ import namespace="System.Web" #>
+<#@ import namespace="System.Net.Http" #>
+<#@ import namespace="System.Net.Http.Formatting" #>
+<#@ import namespace="Newtonsoft.Json" #>
+<#@ output extension=".js" #>
+
+<#
+    string projectPath = Host.ResolveAssemblyReference("$(ProjectDir)");
+	var webApiConfig=new WebApiConfig(projectPath);
+	var endpoints=webApiConfig.LoadEndpoints();
+
+	foreach (var endpoint in endpoints) { 
+		foreach(var c in endpoint.ApiControllers) {
+			var fileName=c.ControllerName + "Test.js";
+#>
+
+var <#= c.ControllerName #>Data = function () {
+    this.webApi = new WebApiConnect("<#= endpoint.BaseAddress #>");
+   
+    if (!this.webApi)
+        alert("Error: WebApiConnect is not initialized");
+
+    if (localStorage['token'])
+        $.ajaxSetup({
+            headers: {
+                Authorization: 'Bearer ' + localStorage['token']
+            }
+        });
+}
+
+<#  foreach(var method in c.Methods) {
+		if(method.Parameters.Count()<1){
+#>
+<#= c.ControllerName #>Data.prototype.<#= method.ActionName #> = function(){
+	return this.webApi.getData("<#= method.Url #>");
+}
+<#	}	else if(method.Parameters.FirstOrDefault().GetMethodParameters().Length>0) {#>
+<#= c.ControllerName #>Data.prototype.<#= method.ActionName #> = function(<#= method.Parameters.FirstOrDefault().GetMethodParameters() #>){
+<# if(method.Parameters.FirstOrDefault().GetRequestSignature().Length>0){#>
+	<#= method.Parameters.FirstOrDefault().GetRequestSignature() #>
+<#}#>
+<# if(method.Method=="POST" || method.Parameters.Any(k=>k.IsArray)) {#>
+	return this.webApi.postData("<#= method.Url #>", request);
+<# } else if(method.Method=="GET" && method.Parameters.Any(k=>k.IsUriParameter)) {#>
+	return this.webApi.getDataByVal("<#= method.Url #>", <#= method.Parameters.FirstOrDefault().GetMethodParameters() #>);
+<# } #>
+}
+<# }} 
+if(webApiConfig.FileOutput=="multiple")
+	SaveOutput(fileName); 
+}}#>
+
+var WebApiConnect = function (baseUrl) {
+    this.baseUrl = baseUrl;
+    this.makeBaseAuth = function (user, password) {
+        var tok = user + ':' + password;
+        var hash = btoa(tok);
+        return "Basic " + hash;
+    } 
+}
+WebApiConnect.prototype.getDataByVal = function getDataByVal(route, val) {
+    return $.get(this.baseUrl + route + "/" + val)
+    .fail(function (jqXHR, textStatus, errorThrown) {
+        alert("Error: " + jqXHR.responseText + " " + textStatus);
+    });
+}
+WebApiConnect.prototype.getData = function getData(route) {
+    return $.get(this.baseUrl + route)
+    .fail(function (jqXHR, textStatus, errorThrown) {
+        alert("Error: " + jqXHR.responseText + " " + textStatus);
+    });
+}
+WebApiConnect.prototype.postData = function postData(route, data) {
+    return $.post(this.baseUrl + route, data)
+    .fail(function (jqXHR, textStatus, errorThrown) {
+        alert("Error: " + jqXHR.responseText + " " + textStatus);
+    });
+}
+WebApiConnect.prototype.initializeTokenAuthorization = function (user, password, tokenUrl) {
+    var credentials = this.makeBaseAuth(user, password);
+    return $.ajax
+          ({
+              type: "POST",
+              url: tokenUrl,
+              dataType: 'json',
+              data: '{""}',
+              contentType: "application/json; charset=utf-8",
+              headers: { 'Authorization': credentials },
+              success: function (response) {
+                  $.ajaxSetup({
+                      headers: {
+                          Authorization: 'Bearer ' + response.Token
+                      }
+                  });
+                  localStorage['token'] = response.Token;
+              },
+              error: function (jqXHR, textStatus, errorThrown) {
+                  alert('Error: ' + errorThrown + ' Status: ' + textStatus);
+              }
+          });
+}
+<# if(webApiConfig.FileOutput=="multiple")
+	SaveOutput("webApiConnectTest.js");
+#> 
+<#+  
+
+	void SaveOutput(string outputFileName)
+	{
+	    string templateDirectory = Path.GetDirectoryName(Host.TemplateFile);
+	    string outputFilePath = Path.Combine(templateDirectory, outputFileName);
+	    File.WriteAllText(outputFilePath, this.GenerationEnvironment.ToString()); 
+
+	    this.GenerationEnvironment.Remove(0, this.GenerationEnvironment.Length);
+	}
+	public class WebApiConfig
+    {
+        public string ConfigFileName { get; set; }
+		public string ConfigFilePath { get; set; }
+		public string FileOutput { get; set; }
+
+        public const string DefaultConfigFileName = "WebApiProxy.config";
+        public const string DefaultClientSuffix = "Client";
+        public const string DefaultNamespace = "WebApiProxy.Proxies";
+        public const string DefaultName = "MyApiProxy";
+        public const string DefaultEndpoint = "http://localhost:8000/api/proxies";
+
+		public WebApiConfig(string configFilePath)
+		{
+			this.ConfigFilePath=configFilePath;
+		}
+
+        public IEnumerable<WebApiEndpoint> LoadEndpoints()
+        {
+           	  
+		    this.ConfigFileName = String.IsNullOrEmpty(this.ConfigFileName) ?
+                             WebApiConfig.DefaultConfigFileName : this.ConfigFileName;
+			
+            var path = Path.Combine(this.ConfigFilePath, this.ConfigFileName);
+            if (!File.Exists(path))
+                throw new Exception("WebApiProxy: Configuration file not found. Please make sure specified config exists within your project root.");
+
+            var xml = XElement.Load(path);
+            var endpoints = (from proxy in xml.Descendants("proxy")
+                            select new WebApiEndpoint
+                            {
+                                ClientSuffix = String.IsNullOrEmpty(proxy.Attribute("clientSuffix").Value) ?
+                                DefaultClientSuffix : proxy.Attribute("clientSuffix").Value,
+                                Name = String.IsNullOrEmpty(proxy.Attribute("name").Value) ?
+                                DefaultName : proxy.Attribute("name").Value,
+                                Namespace = String.IsNullOrEmpty(proxy.Attribute("namespace").Value) ?
+                                DefaultNamespace : proxy.Attribute("namespace").Value,
+                                Endpoint = String.IsNullOrEmpty(proxy.Attribute("endpoint").Value) ?
+                                DefaultEndpoint : proxy.Attribute("endpoint").Value,
+								BaseAddress = String.IsNullOrEmpty(proxy.Attribute("baseaddress").Value) ?
+                                "" : proxy.Attribute("baseaddress").Value
+                            }).ToList();
+			this.FileOutput=xml.Element("proxySettings").Attribute("files").Value;
+            foreach (var item in endpoints)
+            {
+                item.ApiControllers = item.GetDataByNamespaceAndType<List<ApiControllerModel>>();			
+            }
+            return endpoints;
+        }
+    }
+    public class WebApiEndpoint
+    {
+        public string ClientSuffix { get; set; }
+        public string Namespace { get; set; }
+        public string Name { get; set; }
+        public string Endpoint { get; set; }
+		public string BaseAddress { get; set; }
+        public List<ApiControllerModel> ApiControllers { get; set; }
+
+        public static T GetData<T>(string url) where T : new()
+        {
+			var json = string.Empty;
+            using (var wc = new WebClient())
+            {         
+                try
+                {
+                    json = wc.DownloadString(url);
+                }
+                catch { }
+                return string.IsNullOrEmpty(json) ? new T() : JsonConvert.DeserializeObject<T>(json);
+            }
+        }
+		public T GetData<T>() where T : new()
+        {
+			var json = string.Empty;
+            using (var wc = new WebClient())
+            {         
+                try
+                {
+                    json = wc.DownloadString(this.Endpoint);
+                }
+                catch { }
+                return string.IsNullOrEmpty(json) ? new T() : JsonConvert.DeserializeObject<T>(json);
+            }
+        }
+		public  T GetDataByNamespaceAndType<T>() where T : new()
+        {
+            var json = string.Empty;
+            using (var wc = new WebClient())
+            {
+                try
+                {
+                    System.Collections.Specialized.NameValueCollection reqParam = new System.Collections.Specialized.NameValueCollection();
+                    reqParam.Add("Namespace", this.Namespace);     
+					reqParam.Add("Type", "JS");               
+                    byte[] responsebytes = wc.UploadValues(this.Endpoint, "POST", reqParam);
+                    json= Encoding.UTF8.GetString(responsebytes);                 
+                }
+                catch { }
+                return string.IsNullOrEmpty(json) ? new T() : JsonConvert.DeserializeObject<T>(json);
+            }
+        }
+
+    }
+    public class ApiControllerModel
+    {
+        public string ControllerName { get; set; }
+        public IEnumerable<ApiMethodModel> Methods { get; set; }
+    }
+    public class ApiMethodModel
+    {
+        public string Method { get; set; }
+        public string Url { get; set; }
+        public string ControllerName { get; set; }
+        public string ActionName { get; set; }
+        public IEnumerable<ApiParameterModel> Parameters { get; set; }   
+    }
+
+    public class ApiParameterModel
+    {
+        public string Type { get; set; }
+        public List<string> TypeProperties { get; set; }
+        public List<string> TypePropertiesLower { get; set; }
+        public string Name { get; set; }
+        public bool IsUriParameter { get; set; }
+        public bool IsClass { get; set; }
+        public bool IsArray { get; set; }
+		public string GetMethodParameters()
+		{
+			if(this.IsClass)
+				return String.Join(", ",this.TypePropertiesLower);
+			else if(this.IsUriParameter || this.IsArray)
+				return this.Name;
+			return "";
+		}
+		public string GetRequestSignature()
+		{
+			if(this.IsClass)
+			{	
+			  var sig="var request = { ";
+			  for(int i=0; i<this.TypeProperties.Count(); i++)
+			  {
+			  sig+=this.TypeProperties[i]+": "+this.TypePropertiesLower[i]+", ";
+			  }
+			  sig=sig.Substring(0,sig.Length-2)+" };";
+			  return sig;
+			}
+			else if(this.IsArray)
+				return "var request = { '': "+this.Name+" };";
+			return "";
+		}
+    }
+#>

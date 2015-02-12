@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
+VisualStudioVersion = 12.0.30723.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiProxyGen.Server", "WebApiProxyGen.Server\WebApiProxyGen.Server.csproj", "{A0FC15EB-6FC2-4155-A88A-CD3F9AC7DE38}"
 EndProject
@@ -13,6 +13,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{468E49
 		.nuget\NuGet.exe = .nuget\NuGet.exe
 		.nuget\NuGet.targets = .nuget\NuGet.targets
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiProxyGen.ClientJS", "WebApiProxyGen.ClientJS\WebApiProxyGen.ClientJS.csproj", "{5D79F7E6-E5E7-4C26-995A-87611DC890A6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -28,6 +30,10 @@ Global
 		{14FDB788-3733-4541-89A2-87AA4DF501D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{14FDB788-3733-4541-89A2-87AA4DF501D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{14FDB788-3733-4541-89A2-87AA4DF501D0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D79F7E6-E5E7-4C26-995A-87611DC890A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D79F7E6-E5E7-4C26-995A-87611DC890A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D79F7E6-E5E7-4C26-995A-87611DC890A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D79F7E6-E5E7-4C26-995A-87611DC890A6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

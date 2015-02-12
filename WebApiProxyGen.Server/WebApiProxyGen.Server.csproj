@@ -42,6 +42,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.5.1.2\lib\net45\System.Net.Http.Formatting.dll</HintPath>
     </Reference>
+    <Reference Include="System.Web" />
     <Reference Include="System.Web.Http, Version=5.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.1.2\lib\net45\System.Web.Http.dll</HintPath>
@@ -59,6 +60,9 @@
   <ItemGroup>
     <Compile Include="Handlers\MetadataHandler.cs" />
     <Compile Include="Metadata\ActionMethodDefinition.cs" />
+    <Compile Include="Metadata\ApiControllerModel.cs" />
+    <Compile Include="Metadata\ApiMethodModel.cs" />
+    <Compile Include="Metadata\ApiParameterModel.cs" />
     <Compile Include="Metadata\ControllerDefinition.cs" />
     <Compile Include="Metadata\Metadata.cs" />
     <Compile Include="Metadata\MetadataProvider.cs" />

@@ -84,7 +84,22 @@ namespace WebApiProxyGen.Metadata
             return metadata;
 
         }
-
+        public List<ApiControllerModel> GetApiControllers()
+        {
+            var apiExplorer = GlobalConfiguration.Configuration.Services.GetApiExplorer();
+            var apiMethods = apiExplorer.ApiDescriptions.Select(ad => new ApiMethodModel(ad)).ToList();
+            var controllerNames = apiMethods.Select(k => k.ControllerName).Distinct();
+            var apiControllers = new List<ApiControllerModel>();
+            foreach (var name in controllerNames)
+            {
+                if (name != "Meta")
+                {
+                    var apiController = new ApiControllerModel(name, apiMethods.Where(k => k.ControllerName == name).OrderBy(k => k.ActionName).ToList());
+                    apiControllers.Add(apiController);
+                }
+            }
+            return apiControllers;
+        }
         private string ParseType(Type type)
         {
             string res;

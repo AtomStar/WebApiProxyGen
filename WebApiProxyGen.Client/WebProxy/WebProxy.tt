@@ -272,7 +272,8 @@ namespace <#=endpoint.Namespace#>.Clients
                 try
                 {
                     System.Collections.Specialized.NameValueCollection reqParam = new System.Collections.Specialized.NameValueCollection();
-                    reqParam.Add("Namespace", this.Namespace);                 
+                    reqParam.Add("Namespace", this.Namespace); 
+					reqParam.Add("Type", "CS");                 
                     byte[] responsebytes = wc.UploadValues(this.Endpoint, "POST", reqParam);
                     json= Encoding.UTF8.GetString(responsebytes);                 
                 }
