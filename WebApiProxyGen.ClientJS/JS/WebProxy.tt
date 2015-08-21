@@ -31,7 +31,7 @@
 
 	foreach (var endpoint in endpoints) { 
 		foreach(var c in endpoint.ApiControllers) {
-			var fileName=c.ControllerName + "Test.js";
+			var fileName=c.ControllerName + "Data.js";
 #>
 
 var <#= c.ControllerName #>Data = function () {
